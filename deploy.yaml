@@ -1,0 +1,27 @@
+# Nosana deployment for PolliNode worker (vLLM serving Llama 3.1 8B)
+# Deploy at https://deploy.nosana.com/deployments/create
+#
+# Budget discipline for the $70 hackathon credits:
+#   - Simple strategy (bill only while running - NOT "inherit/Infinite")
+#   - replica count 1
+#   - short container timeout (2h) -> redeploy/starts when needed
+#   - stop the instance when idle, restart when hacking
+
+image: ghcr.io/instax-dutta/pollinode-worker:round1
+strategy: simple
+replicas: 1
+containerTimeout: 7200
+resources:
+  gpu: true
+  gpuMarket: nvidia-rtx-5090
+
+command:
+  - python
+  - -m
+  - vllm.entrypoints.openai.api_server
+  - --model
+  - meta-llama/Llama-3.1-8B-Instruct
+  - --max-model-len
+  - "4096"
+  - --port
+  - "8000"

@@ -1,0 +1,16 @@
+services:
+  router:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - POLLINODE_LOG_LEVEL=info
+    depends_on:
+      worker:
+        condition: service_started
+
+  worker:
+    image: vllm/vllm-openai:latest
+    command: ["--model", "meta-llama/Llama-3.1-8B-Instruct", "--max-model-len", "4096"]
+    ports:
+      - "8001:8000"
