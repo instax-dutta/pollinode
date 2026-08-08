@@ -4,13 +4,13 @@
 # Budget discipline for the $70 hackathon credits:
 #   - Simple strategy (bill only while running - NOT "inherit/Infinite")
 #   - replica count 1
-#   - short container timeout (2h) -> redeploy/starts when needed
+#   - short container timeout (1h): starts fresh when you need it
 #   - stop the instance when idle, restart when hacking
 
 image: ghcr.io/instax-dutta/pollinode-worker:round1
 strategy: simple
 replicas: 1
-containerTimeout: 7200
+containerTimeout: 3600
 resources:
   gpu: true
   gpuMarket: nvidia-rtx-5090
