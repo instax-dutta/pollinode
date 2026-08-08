@@ -1,27 +1,75 @@
-# Nosana deployment for PolliNode worker (vLLM serving Llama 3.1 8B)
-# Deploy at https://deploy.nosana.com/deployments/create
+# PolliNode - deployment templates for the Decentralize AI Hackathon credits.
 #
-# Budget discipline for the $70 hackathon credits:
-#   - Simple strategy (bill only while running - NOT "inherit/Infinite")
-#   - replica count 1
-#   - short container timeout (1h): starts fresh when you need it
-#   - stop the instance when idle, restart when hacking
+# Real Nosana schema: name / market / timeout / replicas / strategy / job_definition
+# Market addresses: `nosana market list` (CLI) or explore.nosana.com -> pick by GPU name
+#
+# Budget discipline ($70 / RTX5090 ~$0.48/h, A100-80GB ~$0.90/h):
+#   - strategy: SIMPLE  (bill only while running)
+#   - replicas: 1
+#   - long sessions (360-600 min) for model-download-heavy jobs
+#   - stop deployment when idle; restart when hacking
 
-image: ghcr.io/instax-dutta/pollinode-worker:round1
-strategy: simple
+name: pollinode-a100-distill
+timeout: 360 # minutes = 6h session (60GB model download once + long generation run)
 replicas: 1
-containerTimeout: 3600
-resources:
-  gpu: true
-  gpuMarket: nvidia-rtx-5090
+strategy: SIMPLE
+job_definition:
+  version: "0.1"
+  type: container
+  meta:
+    trigger: api
+    system_requirements:
+      required_vram: 80
+  ops:
+    - type: container/run
+      id: llamacpp-sarvam
+      args:
+        image: ghcr.io/ggml-org/llama.cpp:server-cuda
+        gpu: true
+        expose: 8000
+        cmd:
+          - llama-server
+          - --model
+          - /models/sarvam-105b/sarvam-105b-q4_k_m.gguf
+          - --host
+          - "0.0.0.0"
+          - --port
+          - "8000"
+          - --n-gpu-layers
+          - "99"
+          - --ctx-size
+          - "4096"
+        resources:
+          - type: HF
+            url: https://huggingface.co/sarvamai/sarvam-105b-gguf
+            target: /models/sarvam-gguf
 
-command:
-  - python
-  - -m
-  - vllm.entrypoints.openai.api_server
-  - --model
-  - meta-llama/Llama-3.1-8B-Instruct
-  - --max-model-len
-  - "4096"
-  - --port
-  - "8000"
+---
+# Qwen-2.5-7B inference / LoRA serve (RTX 5090, 32GB) - the MVP demo artifact
+name: pollinode-qwen-lora
+timeout: 180
+replicas: 1
+strategy: SIMPLE
+job_definition:
+  version: "0.1"
+  type: container
+  meta:
+    trigger: api
+  ops:
+    - type: container/run
+      id: vllm-qwen-lora
+      args:
+        image: docker.io/vllm/vllm-openai:latest
+        gpu: true
+        expose: 8000
+        cmd:
+          - --model
+          - Qwen/Qwen2.5-7B-Instruct
+          - --max-model-len
+          - "8192"
+          - --served-model-name
+          - "qwen2.5-7b"
+        resources:
+          - type: S3
+            url: ""
+            target: ""
